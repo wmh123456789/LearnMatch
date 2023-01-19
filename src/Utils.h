@@ -39,7 +39,7 @@ inline bool CompareKeypoints(const cv::KeyPoint& k1, const cv::KeyPoint& k2)
 
 std::vector<int> RandPerm(int n);
 
-void DrawHomography(const cv::Mat& H, cv::Mat image, float w, float h, const CvScalar& colour = CV_RGB(0, 255, 0));
+void DrawHomography(const cv::Mat& H, cv::Mat image, float w, float h, const CvScalar& colour = cvScalar(0, 255, 0));
 
 template <typename T>
 unsigned int CountNonZero(const std::vector<T>& vec)

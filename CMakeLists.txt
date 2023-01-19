@@ -3,6 +3,7 @@ project(LearnMatch)
 cmake_minimum_required(VERSION 2.6)
 
 find_package(OpenCV REQUIRED)
+message(STATUS "OpenCV version" ${OpenCV_VERSION})
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)

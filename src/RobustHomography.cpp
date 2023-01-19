@@ -29,7 +29,7 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/imgproc/imgproc_c.h>
-#include <opencv2/core/internal.hpp>
+// #include <opencv2/core/internal.hpp>
 
 #include <map>
 
@@ -95,7 +95,7 @@ bool RobustHomography::SolveForHypothesis(const vector<int>& sample, vector<Mat>
 {
 	rSolutions.resize(1);
 	if (rSolutions[0].empty()) rSolutions[0].create(3, 3, CV_64F);
-	CvMat H = rSolutions[0];
+	Mat H = rSolutions[0];
 	
     int i, count = sample.size();
 
@@ -167,8 +167,16 @@ bool RobustHomography::SolveForHypothesis(const vector<int>& sample, vector<Mat>
 void RobustHomography::ScoreHypothesis(const Mat& hypothesis, float& rScore, vector<unsigned char>& rInliers, int& rNumInliers)
 {
     int i, count = m_dataSize;
-    CvMat model = hypothesis;
-    const double* H = model.data.db;
+    Mat model = hypothesis;
+    // const double* H = model.data.db;
+    double* H = new double[model.rows*model.cols];  // TODO
+    for(int i = 0; i < model.rows; i++){
+        double* idata = model.ptr<double>(i);
+        for(int j = 0; j < model.cols; j++){
+            H[i * model.rows + j] = idata[j];
+        }
+    }
+
 	double score = 0.0;
 	rNumInliers = 0;
 	map<int, bool> modelPointUsed;
@@ -236,12 +244,12 @@ bool RobustHomography::Polish()
 		if (m_bestInliers[i]) sample.push_back(i);
 	}
 	
-	CvMat* model = &(CvMat)m_bestHypothesis;
+	Mat model = (Mat)m_bestHypothesis; // TODO
 	int maxIters = 10;
 	
     CvLevMarq solver(8, 0, cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, maxIters, DBL_EPSILON));
     int i, j, k, count = sample.size();
-    CvMat modelPart = cvMat( solver.param->rows, solver.param->cols, model->type, model->data.ptr );
+    Mat modelPart = Mat( solver.param->rows, solver.param->cols, model.type(), model.data );  // TODO
     cvCopy( &modelPart, solver.param );
 
     for(;;)

@@ -39,6 +39,8 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
+#include <opencv2/xfeatures2d.hpp>
+#include <opencv2/xfeatures2d/nonfree.hpp>
 
 #define BRIEF (0)
 #define SURF (1)
@@ -113,10 +115,12 @@ private:
 	
 	const Config& m_config;
 	
-	cv::FeatureDetector* m_pFeatureDetector;
-	cv::DescriptorExtractor* m_pDescriptorExtractor;
-	
-	int m_numKeypoints;
+	// cv::FeatureDetector* m_pFeatureDetector;
+	// cv::DescriptorExtractor* m_pDescriptorExtractor;
+    cv::Ptr<FeatureDetector> m_pFeatureDetector;
+    cv::Ptr<DescriptorExtractor> m_pDescriptorExtractor;
+
+    int m_numKeypoints;
 	std::vector<cv::KeyPoint> m_keypoints;
 	std::vector<DescriptorType> m_descriptors;
 	Eigen::VectorXd m_w;

@@ -233,7 +233,7 @@ int main(int argc, char* argv[])
 			bool ok = pVideoInput->ReadFrame(frameGrey);
 			if (!ok) break;
 			cvtColor(frameGrey, frame, CV_GRAY2RGB);
-			DrawHomography(groundTruth[frameIdx], frame, rect.Width(), rect.Height(), CV_RGB(0, 255, 0));
+			DrawHomography(groundTruth[frameIdx], frame, rect.Width(), rect.Height(), cvScalar(0, 255, 0));
 		}
 
 		if (pVideoOutput)
@@ -269,14 +269,14 @@ int main(int argc, char* argv[])
 			
 			if (detector.HasDetection())
 			{
-				DrawHomography(detector.GetH(), frame, rect.Width(), rect.Height(), detector.HasDetection() ? CV_RGB(0, 0, 255) : CV_RGB(255, 0, 0));
+				DrawHomography(detector.GetH(), frame, rect.Width(), rect.Height(), detector.HasDetection() ? cvScalar(0, 0, 255) : cvScalar(255, 0, 0));
 			}
 			
 			detector.Debug();
 		}
 		else
 		{
-			rectangle(frame, Point2i(rect.XMin(), rect.YMin()), Point2i(rect.XMax(), rect.YMax()), CV_RGB(0, 255, 0), 2);
+			rectangle(frame, Point2i(rect.XMin(), rect.YMin()), Point2i(rect.XMax(), rect.YMax()), cvScalar(0, 255, 0), 2);
 		}
 		
 		

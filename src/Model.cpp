@@ -39,6 +39,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
+#
 
 #if DESCRIPTOR_TYPE == BRISK
 #include <brisk/brisk.h>
@@ -50,8 +51,8 @@ using namespace Eigen;
 
 Model::Model(const Config& config, const cv::Mat& image, const IntRect& rect) :
 	m_config(config),
-	m_pFeatureDetector(0),
-	m_pDescriptorExtractor(0)
+	m_pFeatureDetector(),
+	m_pDescriptorExtractor()
 {
 	assert(image.type() == CV_8UC1);
 	
@@ -59,14 +60,22 @@ Model::Model(const Config& config, const cv::Mat& image, const IntRect& rect) :
 	m_useBinaryWeightVector = false;
 	
 #if DESCRIPTOR_TYPE == BRIEF
-	m_pFeatureDetector = new FastFeatureDetector(30);
-	m_pDescriptorExtractor = new BriefDescriptorExtractor(kDescriptorLength/8);
+	// m_pFeatureDetector = new FastFeatureDetector(30);
+    m_pFeatureDetector = FastFeatureDetector::create(30);
+    // m_pDescriptorExtractor = new BriefDescriptorExtractor(kDescriptorLength/8);
+    m_pDescriptorExtractor = xfeatures2d::BriefDescriptorExtractor::create(kDescriptorLength / 8);
+
 #elif DESCRIPTOR_TYPE == BRISK
-	m_pFeatureDetector = new BriskFeatureDetector(40);
-	m_pDescriptorExtractor = new BriskDescriptorExtractor();
+	// m_pFeatureDetector = new BriskFeatureDetector(40);
+    m_pFeatureDetector = BRISK::create(40);
+	// m_pDescriptorExtractor = new BriskDescriptorExtractor();
+	m_pDescriptorExtractor = xfeatures2d::BRISK::create();
+
 #elif DESCRIPTOR_TYPE == SURF
-	m_pFeatureDetector = new SurfFeatureDetector(450.0, 4, 2 );
-	m_pDescriptorExtractor = new SurfDescriptorExtractor(4, 2 );
+	// m_pFeatureDetector = new SurfFeatureDetector(450.0, 4, 2 );
+    m_pFeatureDetector = SurfFeatureDetector::create(450.0, 4, 2 );
+	// m_pDescriptorExtractor = new SurfDescriptorExtractor(4, 2 );
+    m_pDescriptorExtractor = xfeatures2d::SurfDescriptorExtractor::create(4, 2);
 #endif
 	
 	// use the strongest keypoint locations
@@ -497,18 +506,18 @@ void Model::UpdateDebugImage(const Mat& image, const vector<KeyPoint>& keypoints
 {
 	m_debugImage.setTo(0);
 	Mat F = m_debugImage(cv::Rect(GetWidth(), 0, image.cols, image.rows));
-	drawKeypoints(image, keypoints, F, CV_RGB(0, 0, 255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+	drawKeypoints(image, keypoints, F, cvScalar(0, 0, 255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 	if (detected)
 	{
-		DrawHomography(H, F, GetWidth(), GetHeight(), CV_RGB(0, 255, 0));
+		DrawHomography(H, F, GetWidth(), GetHeight(), cvScalar(0, 255, 0));
 		if (Hneg)
 		{
-			DrawHomography(*Hneg, F, GetWidth(), GetHeight(), CV_RGB(255, 0, 0));
+			DrawHomography(*Hneg, F, GetWidth(), GetHeight(), cvScalar(255, 0, 0));
 		}
 		
 	}
 	Mat M = m_debugImage(cv::Rect(0, 0, m_image.cols, m_image.rows));
-	drawKeypoints(m_image, m_keypoints, M, CV_RGB(0, 0, 255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+	drawKeypoints(m_image, m_keypoints, M, cvScalar(0, 0, 255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 	
 	vector<float> vals(m_numKeypoints);
 	vector<unsigned char> topVals(m_numKeypoints);
@@ -544,19 +553,19 @@ void Model::UpdateDebugImage(const Mat& image, const vector<KeyPoint>& keypoints
 			s = (float)(matches[i].score)/std::max(maxScore,-minScore);
 		line(m_debugImage,m_keypoints[matches[i].modelIdx].pt,
 			Point2f(keypoints[matches[i].imageIdx].pt.x+M.cols, keypoints[matches[i].imageIdx].pt.y),
-			CV_RGB(fabs(s)*255, std::max(s,0.0f)*255, 0));
+			cvScalar(fabs(s)*255, std::max(s,0.0f)*255, 0));
 	}
 	
-	Mat I = m_debugImage(cv::Rect(0, image.rows, m_debugImage.cols, 200));
+	cv::Mat I = m_debugImage(cv::Rect(0, image.rows, m_debugImage.cols, 200));
 	I.setTo(cv::Scalar(255,255,255));
-	IplImage II = I;
+	IplImage II = cvIplImage(I);  // TODO
 	setGraphColor(0);
 	drawFloatGraph(&vals[0], vals.size(), &II, 0.f, (float)maxW, I.cols, I.rows);	
 	
 	char buf[100];
 	sprintf(buf, "Model");
-	putText(m_debugImage, buf, Point(15,M.rows + 20), FONT_HERSHEY_DUPLEX, 0.5, CV_RGB(255,255,255), 1, CV_AA);
-	putText(m_debugImage, "Matching using:", Point(15,M.rows + 100), FONT_HERSHEY_DUPLEX, 0.5, CV_RGB(255,255,255), 1, CV_AA);
+	putText(m_debugImage, buf, Point(15,M.rows + 20), FONT_HERSHEY_DUPLEX, 0.5, cvScalar(255,255,255), 1, CV_AA);
+	putText(m_debugImage, "Matching using:", Point(15,M.rows + 100), FONT_HERSHEY_DUPLEX, 0.5, cvScalar(255,255,255), 1, CV_AA);
 	if (m_useClassifiers)
 		sprintf(buf, "Learned weights");
 	else
@@ -569,16 +578,16 @@ void Model::UpdateDebugImage(const Mat& image, const vector<KeyPoint>& keypoints
 		sprintf(buf, "SURF descriptors");
 #endif
 	}		
-	putText(m_debugImage, buf, Point(15,M.rows + 115), FONT_HERSHEY_DUPLEX, 0.5, CV_RGB(255,255,0), 1, CV_AA);
+	putText(m_debugImage, buf, Point(15,M.rows + 115), FONT_HERSHEY_DUPLEX, 0.5, cvScalar(255,255,0), 1, CV_AA);
 	if (m_useClassifiers)
 	{
-		putText(m_debugImage, "Binary approximation:", Point(15,M.rows + 150), FONT_HERSHEY_DUPLEX, 0.5, CV_RGB(255,255,255), 1, CV_AA);
+		putText(m_debugImage, "Binary approximation:", Point(15,M.rows + 150), FONT_HERSHEY_DUPLEX, 0.5, cvScalar(255,255,255), 1, CV_AA);
 		sprintf(buf, "%s", m_useBinaryWeightVector ? "On" : "Off");
-		putText(m_debugImage, buf, Point(15,M.rows + 165), FONT_HERSHEY_DUPLEX, 0.5, CV_RGB(255,255,0), 1, CV_AA);
+		putText(m_debugImage, buf, Point(15,M.rows + 165), FONT_HERSHEY_DUPLEX, 0.5, cvScalar(255,255,0), 1, CV_AA);
 	}
 
 	sprintf(buf, "Norm of weight vector per model keypoint (min:%.8f max:%.8f)", minW, maxW);
-	putText(m_debugImage, buf, Point(15,m_debugImage.rows-20), FONT_HERSHEY_DUPLEX, 0.5, CV_RGB(0,0,0), 1, CV_AA);
+	putText(m_debugImage, buf, Point(15,m_debugImage.rows-20), FONT_HERSHEY_DUPLEX, 0.5, cvScalar(0,0,0), 1, CV_AA);
 }
 
 void Model::FindMatches(const vector<KeyPoint>& keypoints, const vector<DescriptorType>& descriptors, vector<Match>& rMatches)
